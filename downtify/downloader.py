@@ -120,7 +120,7 @@ class Downloader:
         download_dir: Path | str,
         audio_format: str = 'mp3',
         audio_bitrate: str = '320',
-        output_template: str = '{artists} - {title}',
+        output_template: str = '{track_number} - {title}',
         lyrics_providers: Optional[list[str]] = None,
         organize_by_artist: bool = False,
     ):
@@ -133,22 +133,25 @@ class Downloader:
         self.organize_by_artist = organize_by_artist
 
     @staticmethod
+
     def _artist_subdir(song: dict[str, Any]) -> str:
         artists = song.get('artists') or []
-        return _sanitize(artists[0] if artists else 'unknown')
+        album = song.get('album_name') or ''
+
+        artist_path = _sanitize(artists[0] if artists else 'unknown')
+        album_path = _sanitize(album if album else 'unknown')
+
+        return str(Path(artist_path))
 
     def _format_basename(self, song: dict[str, Any]) -> str:
-        artists = ', '.join(song.get('artists') or []) or 'Unknown Artist'
         template = self.output_template.replace('.{output-ext}', '')
         try:
             rendered = template.format(
                 title=song.get('name', 'Unknown'),
-                artists=artists,
-                artist=artists,
-                album=song.get('album_name', ''),
+                track_number=track_number_f(song)
             )
         except (KeyError, IndexError):
-            rendered = f'{artists} - {song.get("name", "Unknown")}'
+            rendered = f'{track_number_f(song)} - {song.get("name", "Unknown")}'
         return _sanitize(rendered)
 
     def existing_filename_for(
@@ -239,7 +242,7 @@ class Downloader:
         )
         target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
         target_dir.mkdir(parents=True, exist_ok=True)
-        out_template = str(target_dir / f'{basename}.%(ext)s')
+        out_template = str(target_dir / _sanitize(song.get('album_name'))/ f'{basename}.%(ext)s')
 
         def hook(data: dict[str, Any]) -> None:
             if progress_cb is None:
@@ -406,6 +409,16 @@ def _album_track_index_for_tags(
             if t > 0:
                 tot = t
     return n, tot
+
+def track_number_f(
+    song: dict[str, Any],
+) -> tuple[Optional[int], Optional[int]]:
+    """Normalize ``track_number`` / ``album_track_total`` for tagging frames."""
+    raw_n = song.get('track_number')
+    if int(raw_n//10)==0:
+        raw_n="0"+str(raw_n)
+    return raw_n
+    
 
 
 def _recording_date_for_tags(song: dict[str, Any]) -> str:
