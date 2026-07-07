@@ -33,6 +33,12 @@ Downtify is a **self-hosted web app** that downloads music from Spotify — with
 It resolves track metadata directly from Spotify's public embed pages, finds the best audio match on YouTube Music, downloads it with `yt-dlp`, converts it with `ffmpeg`, and embeds album art + all metadata with `mutagen`. The entire pipeline runs inside a single Docker container.
 
 ---
+## ⚠️ CHANGES TO THE MAIN PROJECT
+  1. When you select "Organize by Artist" it will follow the scheme: ```Artist/Album/Track```
+
+  3. The track template name is now ```Track_Number - Track_Name```. If ```Track_Number``` is not present, the default track numer is ```01```
+
+---
 
 ## 🚀 Features
 
@@ -154,10 +160,12 @@ When **Settings → File organization → Organize by artist** is enabled, every
 ```
 <downloads>/
   Arctic Monkeys/
-    Arctic Monkeys - Do I Wanna Know.mp3
-    Arctic Monkeys - R U Mine.mp3
+    AM/
+      01 - Do I Wanna Know.mp3
+      02 - R U Mine.mp3
   Tame Impala/
-    Tame Impala - The Less I Know The Better.mp3
+    Currents/
+      07 - The Less I Know The Better.mp3
 ```
 
 This applies to **all** downloads — single tracks, albums and playlists alike. Playlist tracks are saved in their artist's folder instead of a playlist folder, which makes the library compatible with media apps (like Jellyfin, Navidrome, Plex and Beets) that expect an `Artist/Song.ext` folder structure.
