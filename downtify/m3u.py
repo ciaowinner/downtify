@@ -29,9 +29,7 @@ def sanitize_playlist_name(name: str) -> str:
 
     if not name:
         return 'playlist'
-    cleaned = _PLAYLIST_NAME_ALLOWED.sub('', name).strip()
-    cleaned = re.sub(r'\s+', ' ', cleaned)
-    return cleaned or 'playlist'
+    return name or 'playlist'
 
 
 def build_m3u_content(

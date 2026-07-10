@@ -40,7 +40,7 @@ ProgressCallback = Callable[[float, str], None]
 
 
 def _sanitize(text: str) -> str:
-    safe = _INVALID_FS_CHARS.sub('', text or '').strip().strip('.')
+    safe = text
     return safe or 'unknown'
 
 
@@ -138,10 +138,11 @@ class Downloader:
         artists = song.get('artists') or []
         album = song.get('album_name') or ''
 
-        artist_path = _sanitize(artists[0] if artists else 'unknown')
-        album_path = _sanitize(album if album else 'unknown')
+        artist_path = (artists[0] if artists else 'unknown')
+        album_path = (album if album else 'unknown')
 
-        return str(Path(artist_path))
+        path=str(artist_path)+"/"+str(album_path)
+        return path
 
     def _format_basename(self, song: dict[str, Any]) -> str:
         template = self.output_template.replace('.{output-ext}', '')
@@ -196,7 +197,6 @@ class Downloader:
             return self.download_dir, ''
         safe = sanitize_playlist_name(subdir)
         return self.download_dir / safe, f'{safe}/'
-
     def download(  # noqa: PLR0914
         self,
         song: dict[str, Any],
@@ -242,7 +242,7 @@ class Downloader:
         )
         target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
         target_dir.mkdir(parents=True, exist_ok=True)
-        out_template = str(target_dir / _sanitize(song.get('album_name'))/ f'{basename}.%(ext)s')
+        out_template = str(target_dir / f'{basename}.%(ext)s')
 
         def hook(data: dict[str, Any]) -> None:
             if progress_cb is None:
@@ -415,8 +415,11 @@ def track_number_f(
 ) -> tuple[Optional[int], Optional[int]]:
     """Normalize ``track_number`` / ``album_track_total`` for tagging frames."""
     raw_n = song.get('track_number')
-    if int(raw_n//10)==0:
-        raw_n="0"+str(raw_n)
+    try:
+        if int(raw_n//10)==0:
+            raw_n="0"+str(raw_n)
+    except:
+        raw_n="01"
     return raw_n
     
 
