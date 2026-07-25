@@ -436,19 +436,22 @@ def _recording_date_for_tags(song: dict[str, Any]) -> str:
 def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
     if not artists:
         return None
-    if len(artists) > 1:
-        return 'Various Artists'
-    if re.search(r'\s*(?:,|，|&)\s*', artists[0]):
-        return 'Various Artists'
     return artists[0]
 
+def doubble(artists: list[str]):
+    try:
+        artists[0] = artists[0].split("&", 1)[0].strip()
+    except:
+        artists[0] = artists[0].strip()
+    return artists
 
 def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     if not path.exists():
         return
 
     title = song.get('name', '')
-    artists = song.get('artists') or []
+    artist = song.get('artists') or []
+    artists = doubble(artist)
     album_artist = _album_artist_for_tags(artists)
     album = song.get('album_name', '') or ''
     recording_date = _recording_date_for_tags(song)
