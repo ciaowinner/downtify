@@ -316,7 +316,7 @@ async def check_playlist(
             filename = await loop.run_in_executor(
                 None,
                 lambda s=song: downloader.download(
-                    s, _make_cb(s, pl_name), subdir=pl_subdir
+                    s, _make_cb(s, pl_name), subdir=pl_subdir,playlist=True
                 ),
             )
             await asyncio.to_thread(

@@ -202,6 +202,7 @@ class Downloader:
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
         subdir: Optional[str] = None,
+        playlist: Optional[str] = False
     ) -> str:
         """Download ``song`` and return the resulting file name.
 
@@ -237,9 +238,16 @@ class Downloader:
         song = enrich_from_match(song, match)
 
         basename = self._format_basename(song)
-        effective_subdir = (
-            self._artist_subdir(song) if self.organize_by_artist else subdir
-        )
+        # check cases for main directory
+        # check if the download is requested by an playlist download or not
+        if self.organize_by_artist and playlist:
+            effective_subdir = subdir+"/"+self._artist_subdir(song)
+        elif self.organize_by_artist==False and playlist:
+            effective_subdir = subdir
+        elif self.organize_by_artist and playlist==False:
+            effective_subdir = self._artist_subdir(song)
+        else:
+            effective_subdir=subdir
         target_dir, rel_prefix = self._resolve_target_dir(effective_subdir)
         target_dir.mkdir(parents=True, exist_ok=True)
         out_template = str(target_dir / f'{basename}.%(ext)s')

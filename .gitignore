@@ -7,7 +7,7 @@ wheels/
 
 # Virtual environments
 .venv
-
+docker.sh
 .python-version
 .vscode
 docker/
