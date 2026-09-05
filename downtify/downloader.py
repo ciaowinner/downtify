@@ -135,13 +135,15 @@ class Downloader:
     @staticmethod
 
     def _artist_subdir(song: dict[str, Any]) -> str:
-        artists = song.get('artists') or []
-        album = song.get('album_name') or ''
+        artists = doubble(song.get('artists')) or []
+        print("_artist_subdir artists: ", artists)
+        album = song.get('album_name') or '' 
 
         artist_path = (artists[0] if artists else 'unknown')
         album_path = (album if album else 'unknown')
 
         path=str(artist_path)+"/"+str(album_path)
+        print("_artist_subdir path: ", path)
         return path
 
     def _format_basename(self, song: dict[str, Any]) -> str:
@@ -446,12 +448,14 @@ def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
         return None
     return artists[0]
 
-def doubble(artists: list[str]):
-    try:
-        artists[0] = artists[0].split("&", 1)[0].strip()
-    except:
-        artists[0] = artists[0].strip()
-    return artists
+def doubble(artists: list[str]) -> list[str]:
+    return [
+        part.strip()
+        for artist in artists
+        for part in re.split(r"[&,;:\-]", artist)
+        if part.strip()
+    ]
+
 
 def embed_metadata(path: Path, song: dict[str, Any]) -> None:
     if not path.exists():
@@ -579,7 +583,7 @@ def _tag_mp3(
     audio.tags.delall('APIC')
     audio.tags.add(TIT2(encoding=3, text=title))
     if artists:
-        audio.tags.add(TPE1(encoding=3, text=';'.join(artists)))
+        audio.tags.add(TPE1(encoding=3, text='; '.join(artists)))
     if album_artist:
         audio.tags.add(TPE2(encoding=3, text=album_artist))
     if album:
