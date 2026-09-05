@@ -202,7 +202,7 @@ class Downloader:
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
         subdir: Optional[str] = None,
-        playlist: Optional[str] = False
+        playlist: bool = False,
     ) -> str:
         """Download ``song`` and return the resulting file name.
 

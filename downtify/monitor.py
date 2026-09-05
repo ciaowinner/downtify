@@ -46,6 +46,7 @@ class MonitoredPlaylist:
     last_checked: Optional[str]
     last_track_count: int
     created_at: str
+    is_playlist: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -94,6 +95,13 @@ class PlaylistMonitorDB:
                 )
             except Exception:
                 pass
+            # Migration: add is_playlist column if it doesn't exist yet
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists ADD COLUMN is_playlist INTEGER NOT NULL DEFAULT 1'
+                )
+            except Exception:
+                pass
 
     def add_playlist(
         self,
@@ -101,13 +109,21 @@ class PlaylistMonitorDB:
         name: str,
         url: str,
         interval_minutes: int = 60,
+        is_playlist: bool = True,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO monitored_playlists
-                   (spotify_id, name, url, interval_minutes, enabled, created_at)
-                   VALUES (?, ?, ?, ?, 1, ?)""",
-                (spotify_id, name, url, interval_minutes, _now_iso()),
+                   (spotify_id, name, url, interval_minutes, enabled, is_playlist, created_at)
+                   VALUES (?, ?, ?, ?, 1, ?, ?)""",
+                (
+                    spotify_id,
+                    name,
+                    url,
+                    interval_minutes,
+                    int(is_playlist),
+                    _now_iso(),
+                ),
             )
             row = conn.execute(
                 'SELECT * FROM monitored_playlists WHERE id = ?',
@@ -157,6 +173,7 @@ class PlaylistMonitorDB:
             'last_checked',
             'last_track_count',
             'name',
+            'is_playlist',
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
@@ -214,6 +231,7 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
         last_checked=row['last_checked'],
         last_track_count=row['last_track_count'],
         created_at=row['created_at'],
+        is_playlist=bool(row['is_playlist']),
     )
 
 
@@ -316,7 +334,10 @@ async def check_playlist(
             filename = await loop.run_in_executor(
                 None,
                 lambda s=song: downloader.download(
-                    s, _make_cb(s, pl_name), subdir=pl_subdir,playlist=True
+                    s,
+                    _make_cb(s, pl_name),
+                    subdir=pl_subdir,
+                    playlist=playlist.is_playlist,
                 ),
             )
             await asyncio.to_thread(
@@ -415,3 +436,83 @@ async def monitor_loop(
         except Exception:
             logger.exception('Unexpected error in monitor loop')
         await asyncio.sleep(MONITOR_LOOP_INTERVAL)
+
+
+# Audio and lyrics file extensions managed by the downloader.
+_AUDIO_EXTENSIONS = {
+    '.mp3',
+    '.m4a',
+    '.mp4',
+    '.aac',
+    '.flac',
+    '.ogg',
+    '.oga',
+    '.opus',
+}
+_LYRICS_EXTENSIONS = {'.lrc'}
+
+
+def delete_playlist_files(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    download_dir: Path,
+) -> int:
+    """Delete downloaded files for *playlist* and return count removed.
+
+    Removes audio + ``.lrc`` files tracked in the DB, the M3U file, and
+    the per-playlist folder if it exists.  Finally cleans up any empty
+    directories left under *download_dir*.
+    """
+    track_files = db.get_track_filenames(playlist.id)
+    removed = 0
+    for filename in track_files.values():
+        if not filename:
+            continue
+        fpath = download_dir / filename
+        if not fpath.exists():
+            continue
+        try:
+            fpath.unlink()
+            removed += 1
+        except OSError:
+            logger.warning('Could not delete file {}', fpath)
+            continue
+        lrc = fpath.with_suffix('.lrc')
+        if lrc.exists():
+            try:
+                lrc.unlink()
+            except OSError:
+                pass
+
+    # Remove the M3U file if it exists (in the playlist subdir or Playlists/).
+    safe_name = m3u.sanitize_playlist_name(playlist.name)
+    for m3u_dir in (download_dir / safe_name, download_dir / 'Playlists'):
+        m3u_file = m3u_dir / f'{safe_name}.m3u'
+        if m3u_file.exists():
+            try:
+                m3u_file.unlink()
+            except OSError:
+                pass
+
+    # Remove the playlist folder itself if empty (artist mode creates it).
+    pl_folder = download_dir / safe_name
+    if pl_folder.is_dir():
+        try:
+            if not any(pl_folder.iterdir()):
+                pl_folder.rmdir()
+        except OSError:
+            pass
+
+    _remove_empty_dirs(download_dir)
+    return removed
+
+
+def _remove_empty_dirs(root: Path) -> None:
+    """Recursively remove empty directories under *root* (bottom-up)."""
+    for dirpath in sorted(root.rglob('*'), reverse=True):
+        if dirpath.is_dir():
+            try:
+                if not any(dirpath.iterdir()):
+                    dirpath.rmdir()
+            except OSError:
+                pass

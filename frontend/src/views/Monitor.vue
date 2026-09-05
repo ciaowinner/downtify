@@ -15,45 +15,62 @@
       </div>
 
       <!-- Add playlist form -->
-      <div class="surface rounded-2xl p-5 mb-8">
+      <div class="surface rounded-2xl p-5 mb-8 relative z-30">
         <h2
           class="text-sm font-semibold uppercase tracking-wider text-base-content/50 mb-4"
         >
           {{ t('monitor.watchNew') }}
         </h2>
-        <form @submit.prevent="onAdd" class="flex flex-col sm:flex-row gap-3">
-          <input
-            v-model="newUrl"
-            type="text"
-            :placeholder="t('monitor.urlPlaceholder')"
-            class="input-modern flex-1 h-11 text-sm"
-            :disabled="adding"
-          />
-          <div class="flex items-center gap-2 shrink-0">
-            <select
-              v-model="newInterval"
-              class="select select-sm rounded-full border border-white/10 bg-base-100/85 focus:border-primary/60 h-11 px-3 text-sm"
-              :disabled="adding"
-            >
-              <option :value="15">{{ t('monitor.every15') }}</option>
-              <option :value="30">{{ t('monitor.every30') }}</option>
-              <option :value="60">{{ t('monitor.every1h') }}</option>
-              <option :value="180">{{ t('monitor.every3h') }}</option>
-              <option :value="360">{{ t('monitor.every6h') }}</option>
-              <option :value="720">{{ t('monitor.every12h') }}</option>
-              <option :value="1440">{{ t('monitor.every1d') }}</option>
-              <option :value="10080">{{ t('monitor.every1w') }}</option>
-              <option :value="20160">{{ t('monitor.every2w') }}</option>
-              <option :value="43200">{{ t('monitor.every1mo') }}</option>
-            </select>
-            <button
-              type="submit"
-              class="btn btn-primary btn-sm h-11 px-5 rounded-full"
-              :disabled="adding || !newUrl.trim()"
-            >
-              <span v-if="adding" class="loading loading-spinner loading-xs" />
-              <span v-else>{{ t('monitor.watch') }}</span>
-            </button>
+        <form @submit.prevent="onAdd">
+          <div class="flex flex-col sm:flex-row gap-3 items-end">
+            <div class="flex-1 min-w-0">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+              >
+                URL
+              </label>
+              <input
+                v-model="newUrl"
+                type="text"
+                :placeholder="t('monitor.urlPlaceholder')"
+                class="input-modern w-full h-11 text-sm"
+                :disabled="adding"
+              />
+            </div>
+            <div class="w-full sm:w-36 shrink-0">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+              >
+                {{ t('monitor.labelType') }}
+              </label>
+              <CustomSelect
+                v-model="newType"
+                :options="typeOptions"
+                :disabled="adding"
+              />
+            </div>
+            <div class="w-full sm:w-40 shrink-0">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+              >
+                {{ t('monitor.labelInterval') }}
+              </label>
+              <CustomSelect
+                v-model="newInterval"
+                :options="intervalOptions"
+                :disabled="adding"
+              />
+            </div>
+            <div class="shrink-0">
+              <button
+                type="submit"
+                class="btn btn-primary btn-sm h-11 px-5 rounded-full"
+                :disabled="adding || !newUrl.trim()"
+              >
+                <span v-if="adding" class="loading loading-spinner loading-xs" />
+                <span v-else>{{ t('monitor.watch') }}</span>
+              </button>
+            </div>
           </div>
         </form>
         <p v-if="addError" class="mt-2 text-xs text-error">{{ addError }}</p>
@@ -86,7 +103,7 @@
         <li
           v-for="pl in playlists"
           :key="pl.id"
-          class="surface rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          class="surface rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 relative z-30"
         >
           <!-- Info -->
           <div class="flex-1 min-w-0">
@@ -97,6 +114,9 @@
                 :class="pl.enabled ? 'badge-soft' : 'badge-neutral-soft'"
               >
                 {{ pl.enabled ? t('monitor.active') : t('monitor.paused') }}
+              </span>
+              <span class="pill shrink-0 badge-soft">
+                {{ pl.is_playlist ? t('monitor.typePlaylist') : t('monitor.typeArtist') }}
               </span>
             </div>
             <div
@@ -135,22 +155,13 @@
           <!-- Actions -->
           <div class="flex items-center gap-2 shrink-0">
             <!-- Interval selector -->
-            <select
-              :value="pl.interval_minutes"
-              @change="onChangeInterval(pl, $event)"
-              class="select select-xs rounded-full border border-white/10 bg-base-100/60 text-xs focus:border-primary/60"
-            >
-              <option :value="15">{{ t('monitor.short15') }}</option>
-              <option :value="30">{{ t('monitor.short30') }}</option>
-              <option :value="60">{{ t('monitor.short1h') }}</option>
-              <option :value="180">{{ t('monitor.short3h') }}</option>
-              <option :value="360">{{ t('monitor.short6h') }}</option>
-              <option :value="720">{{ t('monitor.short12h') }}</option>
-              <option :value="1440">{{ t('monitor.short1d') }}</option>
-              <option :value="10080">{{ t('monitor.short1w') }}</option>
-              <option :value="20160">{{ t('monitor.short2w') }}</option>
-              <option :value="43200">{{ t('monitor.short1mo') }}</option>
-            </select>
+            <CustomSelect
+              :model-value="pl.interval_minutes"
+              :options="intervalShortOptions"
+              :compact="true"
+              @update:model-value="(val) => onChangeIntervalVal(pl, val)"
+              class="w-20"
+            />
 
             <!-- Toggle enabled -->
             <button
@@ -205,10 +216,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import Navbar from '/src/components/Navbar.vue'
 import Settings from '/src/components/Settings.vue'
+import CustomSelect from '/src/components/CustomSelect.vue'
 import monitorAPI from '/src/model/monitor.js'
 import { useI18n } from '/src/i18n'
 
@@ -220,7 +232,39 @@ const adding = ref(false)
 const addError = ref('')
 const newUrl = ref('')
 const newInterval = ref(60)
+const newType = ref('playlist')
 const checking = ref({})
+
+const typeOptions = computed(() => [
+  { value: 'playlist', label: t('monitor.typePlaylist') },
+  { value: 'artist', label: t('monitor.typeArtist') },
+])
+
+const intervalOptions = computed(() => [
+  { value: 15, label: t('monitor.every15') },
+  { value: 30, label: t('monitor.every30') },
+  { value: 60, label: t('monitor.every1h') },
+  { value: 180, label: t('monitor.every3h') },
+  { value: 360, label: t('monitor.every6h') },
+  { value: 720, label: t('monitor.every12h') },
+  { value: 1440, label: t('monitor.every1d') },
+  { value: 10080, label: t('monitor.every1w') },
+  { value: 20160, label: t('monitor.every2w') },
+  { value: 43200, label: t('monitor.every1mo') },
+])
+
+const intervalShortOptions = computed(() => [
+  { value: 15, label: t('monitor.short15') },
+  { value: 30, label: t('monitor.short30') },
+  { value: 60, label: t('monitor.short1h') },
+  { value: 180, label: t('monitor.short3h') },
+  { value: 360, label: t('monitor.short6h') },
+  { value: 720, label: t('monitor.short12h') },
+  { value: 1440, label: t('monitor.short1d') },
+  { value: 10080, label: t('monitor.short1w') },
+  { value: 20160, label: t('monitor.short2w') },
+  { value: 43200, label: t('monitor.short1mo') },
+])
 
 async function load() {
   loading.value = true
@@ -238,7 +282,8 @@ async function onAdd() {
   try {
     const res = await monitorAPI.addMonitoredPlaylist(
       newUrl.value.trim(),
-      newInterval.value
+      newInterval.value,
+      newType.value === 'playlist'
     )
     playlists.value.unshift(res.data)
     newUrl.value = ''
@@ -260,8 +305,7 @@ async function onToggle(pl) {
   }
 }
 
-async function onChangeInterval(pl, event) {
-  const val = parseInt(event.target.value, 10)
+async function onChangeIntervalVal(pl, val) {
   try {
     const res = await monitorAPI.updateMonitoredPlaylist(pl.id, {
       interval_minutes: val,
@@ -291,8 +335,9 @@ async function onCheck(pl) {
 
 async function onDelete(pl) {
   if (!confirm(t('monitor.deletePrompt', { name: pl.name }))) return
+  const deleteFiles = confirm(t('monitor.deleteFilesPrompt', { name: pl.name }))
   try {
-    await monitorAPI.deleteMonitoredPlaylist(pl.id)
+    await monitorAPI.deleteMonitoredPlaylist(pl.id, deleteFiles)
     playlists.value = playlists.value.filter((p) => p.id !== pl.id)
   } catch {
     // silently ignore

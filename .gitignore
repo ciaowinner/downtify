@@ -11,7 +11,7 @@ docker.sh
 .python-version
 .vscode
 docker/
-
+test.sh
 .env
 
 # Created by https://www.toptal.com/developers/gitignore/api/python

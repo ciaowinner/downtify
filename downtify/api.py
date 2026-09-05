@@ -36,7 +36,7 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import m3u, providers, spotify
+from . import m3u, monitor, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
@@ -642,6 +642,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
 
     url = payload.get('url', '')
     interval_minutes = int(payload.get('interval_minutes', 60))
+    is_playlist = bool(payload.get('is_playlist', True))
 
     parsed = spotify.parse_spotify_url(url)
     if parsed is None or parsed[0] != 'playlist':
@@ -666,7 +667,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     playlist = await asyncio.to_thread(
-        db.add_playlist, spotify_id, name, url, interval_minutes
+        db.add_playlist, spotify_id, name, url, interval_minutes, is_playlist
     )
 
     # Kick off the first download pass immediately so the user does not have
@@ -707,6 +708,8 @@ async def update_monitor_playlist(
         kwargs['interval_minutes'] = int(payload['interval_minutes'])
     if 'enabled' in payload:
         kwargs['enabled'] = bool(payload['enabled'])
+    if 'is_playlist' in payload:
+        kwargs['is_playlist'] = bool(payload['is_playlist'])
 
     updated = await asyncio.to_thread(
         db.update_playlist, playlist_id, **kwargs
@@ -719,14 +722,31 @@ async def update_monitor_playlist(
 
 
 @router.delete('/api/monitor/playlists/{playlist_id}')
-async def delete_monitor_playlist(playlist_id: int) -> dict[str, Any]:
+async def delete_monitor_playlist(
+    playlist_id: int, delete_files: bool = Query(False)
+) -> dict[str, Any]:
     db = _require_monitor_db()
-    deleted = await asyncio.to_thread(db.delete_playlist, playlist_id)
-    if not deleted:
+    playlist = await asyncio.to_thread(db.get_playlist, playlist_id)
+    if playlist is None:
         raise HTTPException(
             status_code=404, detail='Monitored playlist not found'
         )
-    return {'deleted': True, 'id': playlist_id}
+
+    files_deleted = 0
+    if delete_files and state.downloader is not None:
+        files_deleted = await asyncio.to_thread(
+            monitor.delete_playlist_files,
+            playlist,
+            db,
+            state.downloader.download_dir,
+        )
+
+    await asyncio.to_thread(db.delete_playlist, playlist_id)
+    return {
+        'deleted': True,
+        'id': playlist_id,
+        'files_deleted': files_deleted,
+    }
 
 
 @router.post('/api/monitor/playlists/{playlist_id}/check')
