@@ -1188,6 +1188,8 @@ export default {
     save: 'Запази',
     saved: 'Наблюдението е обновено',
     retargeted: 'Вече се следи {name}',
+    playlistSubfolder: 'Организирай в плейлист папка',
+    playlistSubfolderBadge: 'Подпапка',
   },
   watchStats: {
     colActivity: 'Активност',

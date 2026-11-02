@@ -631,14 +631,16 @@ class Downloader:
     ) -> Optional[str]:
         """Resolve the destination sub-directory for ``song``.
 
-        The ``organize_by_*`` toggles take precedence over the caller's
-        ``fallback`` (e.g. a per-playlist folder). When both are enabled
-        the layout nests as ``<Artist>/<Album>/``; a single toggle yields
-        just that one level. When neither is set the ``fallback`` is used
-        unchanged.
+        The ``fallback`` (e.g. a per-playlist folder) is always included
+        first when provided. The ``organize_by_*`` toggles then append
+        their own levels, so all enabled options nest together:
+        ``<Playlist>/<Artist>/<Album>/`` when everything is on.
+        When nothing is set the ``fallback`` is returned unchanged.
         """
 
         parts: list[str] = []
+        if fallback:
+            parts.append(fallback)
         if self.organize_by_artist:
             parts.append(self._artist_subdir(song))
         if self.organize_by_album:

@@ -10088,6 +10088,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
     url = payload.get('url', '')
     interval_minutes = int(payload.get('interval_minutes', 60))
     release_types = _release_types_from(payload)
+    playlist_subfolder = bool(payload.get('playlist_subfolder', False))
 
     kind, watch_key, name = await _resolve_watch_target(url)
     # Release filters only mean something for an artist's discography.
@@ -10118,6 +10119,7 @@ async def add_monitor_playlist(request: Request) -> dict[str, Any]:
         release_types,
         new_only,
         user_id,
+        playlist_subfolder,
     )
     _start_initial_check(playlist, db)
     return playlist.to_dict()

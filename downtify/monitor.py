@@ -322,6 +322,9 @@ class MonitoredPlaylist:
     # Set while a "new releases only" watch still has to record the
     # artist's current discography as already there (see check_artist).
     baseline_pending: bool = False
+    # When True, downloaded tracks land in a per-playlist subfolder
+    # (``downloads/<Playlist Name>/``) instead of the main download folder.
+    playlist_subfolder: bool = False
 
     @property
     def source(self) -> str:
@@ -419,6 +422,14 @@ class PlaylistMonitorDB:
                 )
             except Exception:
                 pass
+            # Migration: add playlist_subfolder column if it doesn't exist yet
+            try:
+                conn.execute(
+                    'ALTER TABLE monitored_playlists ADD COLUMN playlist_subfolder '
+                    'INTEGER NOT NULL DEFAULT 0'
+                )
+            except Exception:
+                pass
             # Migration: one watch per URL became one watch per URL and
             # owner, so two accounts can follow the same playlist.
             columns = {
@@ -482,14 +493,15 @@ class PlaylistMonitorDB:
         release_types: str = ALL_RELEASE_TYPES,
         new_only: bool = False,
         user_id: int = 0,
+        playlist_subfolder: bool = False,
     ) -> MonitoredPlaylist:
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO monitored_playlists
                    (spotify_id, name, url, interval_minutes, enabled,
                     created_at, kind, release_types, new_only,
-                    baseline_pending, user_id)
-                   VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)""",
+                    baseline_pending, user_id, playlist_subfolder)
+                   VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     spotify_id,
                     name,
@@ -501,6 +513,7 @@ class PlaylistMonitorDB:
                     int(new_only),
                     int(new_only),
                     int(user_id or 0),
+                    int(playlist_subfolder),
                 ),
             )
             row = conn.execute(
@@ -889,6 +902,9 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
             if 'baseline_pending' in keys
             else False
         ),
+        playlist_subfolder=bool(row['playlist_subfolder'])
+        if 'playlist_subfolder' in keys
+        else False,
     )
 
 
@@ -980,6 +996,10 @@ async def check_playlist(
     )
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+    # When the watch is set to organize per-playlist, tracks land in a
+    # subfolder named after the playlist; otherwise they go to the main
+    # download folder (subdir=None).
+    download_subdir = pl_subdir if playlist.playlist_subfolder else None
 
     # Filenames already known from earlier sweeps, keyed by track id,
     # topped up as each new track lands. Lets the M3U be rewritten after
@@ -1043,7 +1063,7 @@ async def check_playlist(
                 downloader,
                 broadcast,
                 loop,
-                subdir=pl_subdir,
+                subdir=download_subdir,
                 initial=initial,
             )
             invalidate_library_paths_cache()
@@ -1802,6 +1822,10 @@ def _regenerate_m3u(
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
     download_dir = Path(downloader.download_dir)
     slskd_dir = slskd_dir_from_downloader(downloader)
+    # When the watch uses a per-playlist subfolder, files and M3U live
+    # inside it; otherwise files are in the main folder and M3U follows
+    # the organize-by-artist/album rule.
+    m3u_subdir = pl_subdir if playlist.playlist_subfolder else None
     entries: list[dict[str, Any]] = []
     for song in tracks:
         if resolved is not None:
@@ -1813,7 +1837,7 @@ def _regenerate_m3u(
                 and locate_library_file(filename, download_dir, slskd_dir)
             ):
                 filename = downloader.existing_filename_for(
-                    song, subdir=pl_subdir
+                    song, subdir=m3u_subdir or pl_subdir
                 )
         if not filename:
             continue
@@ -1829,15 +1853,16 @@ def _regenerate_m3u(
             playlist.name,
         )
         return None
-    # When organize-by-artist/album is on the tracks live in those folders
-    # rather than the per-playlist subfolder, so the M3U goes to the legacy
-    # Playlists/ directory where its relative paths still resolve.
+    # When organize-by-artist/album is on and no per-playlist subfolder,
+    # tracks live in those folders rather than the per-playlist subfolder,
+    # so the M3U goes to the legacy Playlists/ directory where its relative
+    # paths still resolve.
     organize = downloader.organize_by_artist or downloader.organize_by_album
     path, _kept = m3u.write_m3u(
         downloader.download_dir,
         playlist.name,
         entries,
-        playlist_subdir=None if organize else pl_subdir,
+        playlist_subdir=m3u_subdir if not organize else None,
         slskd_dir=slskd_dir,
     )
     return path
@@ -1858,10 +1883,12 @@ def _download_cover_for_watch(
 
     organize = downloader.organize_by_artist or downloader.organize_by_album
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
+    # When the watch uses a per-playlist subfolder, the cover lives inside it.
+    cover_subdir = pl_subdir if playlist.playlist_subfolder else None
     m3u_path = m3u.m3u_path_for(
         downloader.download_dir,
         playlist.name,
-        playlist_subdir=None if organize else pl_subdir,
+        playlist_subdir=cover_subdir if not organize else None,
     )
     return download_playlist_cover(
         playlist.source, playlist.spotify_id, m3u_path, settings

@@ -1195,6 +1195,8 @@ export default {
     save: '저장',
     saved: '모니터링 설정이 업데이트되었습니다',
     retargeted: '이제 {name}을(를) 모니터링합니다',
+    playlistSubfolder: '재생목록 폴더로 정리',
+    playlistSubfolderBadge: '하위폴더',
   },
   watchStats: {
     colActivity: '활동',

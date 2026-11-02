@@ -1227,6 +1227,8 @@ export default {
     save: 'Enregistrer',
     saved: 'Surveillance mise à jour',
     retargeted: 'Surveillance de {name}',
+    playlistSubfolder: 'Organiser par dossier playlist',
+    playlistSubfolderBadge: 'Sous-dossier',
   },
   watchStats: {
     colActivity: 'Activité',

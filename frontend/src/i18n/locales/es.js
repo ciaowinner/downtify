@@ -1208,6 +1208,8 @@ export default {
     save: 'Guardar',
     saved: 'Vigilancia actualizada',
     retargeted: 'Ahora vigilando {name}',
+    playlistSubfolder: 'Organizar por carpeta de playlist',
+    playlistSubfolderBadge: 'Subcarpeta',
   },
   watchStats: {
     colActivity: 'Actividad',

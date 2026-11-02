@@ -42,6 +42,19 @@
           icon="clock"
           class="flex-1 sm:flex-none"
         />
+        <template v-if="tab === 'playlist'">
+          <label
+            class="flex h-10 w-full items-center gap-2 rounded-control border border-line-2 bg-surface px-3 transition-colors focus-within:border-accent"
+          >
+            <AppIcon name="folder" :size="16" class="text-faint" />
+            <span class="text-sm text-muted">{{ t('monitor.playlistSubfolder') }}</span>
+            <UiSwitch
+              v-model="newPlaylistSubfolder"
+              class="ml-auto"
+              :aria-label="t('monitor.playlistSubfolder')"
+            />
+          </label>
+        </template>
         <UiButton
           type="submit"
           variant="primary"
@@ -285,6 +298,14 @@
                       tone="accent"
                     >
                       {{ t('monitor.newOnlyBadge') }}
+                    </UiBadge>
+                  </span>
+                  <span
+                    v-if="tab === 'playlist' && item.playlist_subfolder"
+                    class="mt-1 flex flex-wrap gap-1"
+                  >
+                    <UiBadge tone="info">
+                      {{ t('monitor.playlistSubfolderBadge') }}
                     </UiBadge>
                   </span>
                 </div>
@@ -570,6 +591,7 @@ const newInterval = ref(360)
 // A new artist watch's filters (the artists tab's form).
 const newReleaseTypes = ref([...RELEASE_TYPES])
 const newOnly = ref(false)
+const newPlaylistSubfolder = ref(false)
 const checking = ref(new Set())
 const checkingAll = ref(false)
 const query = ref('')
@@ -968,7 +990,7 @@ async function add() {
       newInterval.value,
       kind === 'artist'
         ? { release_types: newReleaseTypes.value, new_only: newOnly.value }
-        : {}
+        : { playlist_subfolder: newPlaylistSubfolder.value }
     )
     items.value = [res.data, ...items.value]
     newUrl[kind] = ''

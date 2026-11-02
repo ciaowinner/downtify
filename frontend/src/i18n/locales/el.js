@@ -1214,6 +1214,8 @@ export default {
     save: 'Αποθήκευση',
     saved: 'Η παρακολούθηση ενημερώθηκε',
     retargeted: 'Παρακολούθηση του {name}',
+    playlistSubfolder: 'Οργάνωση σε φάκελο λίστας',
+    playlistSubfolderBadge: 'Υποφάκελος',
   },
   watchStats: {
     colActivity: 'Δραστηριότητα',

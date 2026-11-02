@@ -1231,6 +1231,8 @@ export default {
     save: 'Speichern',
     saved: 'Überwachung aktualisiert',
     retargeted: '{name} wird jetzt überwacht',
+    playlistSubfolder: 'Nach Playlist-Ordner organisieren',
+    playlistSubfolderBadge: 'Unterordner',
   },
   watchStats: {
     colActivity: 'Aktivität',

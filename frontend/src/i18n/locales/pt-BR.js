@@ -1201,6 +1201,8 @@ export default {
     save: 'Salvar',
     saved: 'Monitoramento atualizado',
     retargeted: 'Agora monitorando {name}',
+    playlistSubfolder: 'Organizar por pasta da playlist',
+    playlistSubfolderBadge: 'Subpasta',
   },
   watchStats: {
     colActivity: 'Atividade',

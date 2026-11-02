@@ -1197,6 +1197,8 @@ export default {
     save: 'Kaydet',
     saved: 'İzleme güncellendi',
     retargeted: 'Artık {name} izleniyor',
+    playlistSubfolder: 'Çalma listesi klasöründe düzenle',
+    playlistSubfolderBadge: 'Alt klasör',
   },
   watchStats: {
     colActivity: 'Etkinlik',

@@ -1201,6 +1201,8 @@ export default {
     save: 'Mentés',
     saved: 'Figyelés frissítve',
     retargeted: 'Most figyelve: {name}',
+    playlistSubfolder: 'Lista mappájában rendszerezés',
+    playlistSubfolderBadge: 'Almappa',
   },
   watchStats: {
     colActivity: 'Aktivitás',

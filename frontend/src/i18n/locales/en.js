@@ -1177,6 +1177,8 @@ export default {
     save: 'Save',
     saved: 'Watch updated',
     retargeted: 'Now watching {name}',
+    playlistSubfolder: 'Organizza per cartella playlist',
+    playlistSubfolderBadge: 'Subfolder',
   },
   watchStats: {
     colActivity: 'Activity',
