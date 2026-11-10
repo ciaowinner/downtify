@@ -590,6 +590,8 @@ export default {
       artistDesc: 'Изпълнител (Я–А)',
       albumAsc: 'Албум (А–Я)',
       albumDesc: 'Албум (Я–А)',
+      releaseNewest: 'Първо най-новите издания',
+      releaseOldest: 'Първо най-старите издания',
       longest: 'Първо най-дългите',
       shortest: 'Първо най-късите',
     },
@@ -940,6 +942,23 @@ export default {
   },
   playlists: {
     kicker: 'Плейлист',
+    diagnostics: {
+      title: 'Диагностика на плейлиста',
+      check: 'Провери',
+      refresh: 'Обнови',
+      unavailable: 'Диагностиката не е налична за този плейлист.',
+      items: {
+        spotify_tracks: 'Песни в Spotify',
+        downloaded: 'Изтеглени от Downtify',
+        physical_files: 'Намерени файлове',
+        track_index: 'Съответствия в TrackIndex',
+        monitor_history: 'История на Monitor',
+        navidrome_matched: 'Намерени в Navidrome',
+        navidrome_rows: 'Песни в плейлиста на Navidrome',
+        missing_files: 'Липсващи файлове',
+        orphan_files: 'Осиротели файлове',
+      },
+    },
     notFound: 'Плейлистът не е намерен',
     progress: '{have} от {total} изтеглени',
     missingShort: { one: 'липсва {count}', other: 'липсват {count}' },
@@ -976,6 +995,26 @@ export default {
     },
     alreadyIn: 'Вече е в „{name}“',
     removedTrack: 'Премахната от „{name}“',
+    reorder: 'Пренареди',
+    reorderHint:
+      'Плъзни песните или използвай стрелките, след което запази новия ред.',
+    reorderSave: 'Запази реда',
+    reordered: 'Редът е запазен',
+    reorderStale:
+      'Някой промени този плейлист междувременно. Той беше презареден: подреди го отново.',
+    moveUp: 'Премести нагоре',
+    moveDown: 'Премести надолу',
+    moveTop: 'Премести в началото',
+    moveBottom: 'Премести в края',
+    repeatTitle: 'Вече е в този плейлист',
+    repeatBody: {
+      one: 'Тази песен вече е в „{name}“. Да се добави ли отново?',
+      other:
+        '{count} от тези песни вече са в „{name}“. Да се добавят ли отново?',
+    },
+    repeatConfirm: 'Добави въпреки това',
+    repeatCancel: 'Не добавяй',
+    inPlaylist: 'Вече е добавена',
     hideTrack: 'Скрий от плейлиста',
     hiddenTrack: 'Скрита от „{name}“',
     hiddenTitle: {
@@ -997,6 +1036,12 @@ export default {
     nothingYet: 'Още няма изтеглени песни',
     nothingYetHint: 'Песните се появяват тук, когато се изтеглят.',
     nothingYetManualHint: 'Добави песни от библиотеката.',
+    uploadCover: 'Качи обложка',
+    removeCover: 'Премахни обложката',
+    coverSaved: 'Обложката на плейлиста е запазена',
+    coverRemoved: 'Обложката на плейлиста е премахната',
+    coverInvalid: 'Избери JPEG, PNG или WebP изображение.',
+    coverTooLarge: 'Изображението трябва да е до 10 MiB.',
   },
   track: {
     title: 'Заглавие',
@@ -1004,6 +1049,7 @@ export default {
     album: 'Албум',
     trackNumber: 'Номер',
     year: 'Година',
+    releaseDate: 'Дата на издаване',
     length: 'Продължителност',
     format: 'Формат',
     size: 'Размер',
@@ -1432,6 +1478,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Приоритет на форматите',
+    slskdFormatsHint:
+      'Разширения, разделени със запетая, подредени по приоритет (например flac, mp3).',
+    slskdMinBitrate: 'Минимален битрейт за формати със загуби',
+    slskdMinBitrateHint:
+      'При строг режим файловете със загуби под тази стойност или без отчетен битрейт се отхвърлят. FLAC не се влияе.',
+    slskdAttempts: 'Опити за кандидати',
+    slskdAttemptsHint:
+      'При строг режим се пробват толкова кандидати за всеки формат; иначе това е общият брой.',
+    slskdStrictPriority: 'Строг приоритет на форматите',
+    slskdStrictPriorityHint:
+      'Пробвай форматите по ред, като подреждаш съвпаденията във всеки формат.',
+    slskdWhitelist: 'Разреши само изброените формати',
+    slskdWhitelistHint: 'Отхвърляй резултати с разширение извън списъка.',
     slskdHint:
       'Изтегляй от Soulseek чрез своя slskd сървър. Ненамерените песни минават към следващия източник.',
     slskdEnabled: 'Използвай slskd',
@@ -1444,7 +1504,7 @@ export default {
     slskdQueuedTimeout: 'Време за изчакване в опашка',
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:
-      'Тагва ги там, където slskd ги е запазил, вместо да ги копира в папката за изтегляния.',
+      'Включено: файловете се маркират на място и се запазват. Изключено: копират се в папката за изтегляния, а източникът се премахва само след успешен импорт. При грешка източникът се запазва.',
     youtubeTitle: 'YouTube',
     cookies: 'Бисквитки за YouTube',
     cookiesHint:
@@ -1461,9 +1521,14 @@ export default {
     audioGroup: 'Аудио',
     format: 'Формат',
     formatHint: 'Файловете от YouTube се конвертират в този формат.',
+    formatOriginal: 'Оригинален',
+    formatOriginalHint:
+      'Запазва най-качествения наличен аудио поток без повторно кодиране. Разширението зависи от източника.',
     bitrate: 'Качество',
     bitrateHint: 'Битрейт за формати със загуби.',
     bitrateLossless: 'Не се използва за FLAC, който е без загуби.',
+    bitrateOriginal:
+      'Не се използва при запазване на оригиналния аудио формат.',
     filesGroup: 'Файлове',
     template: 'Име на файла',
     templateHint: 'Използвай / за създаване на папки.',
@@ -1701,9 +1766,14 @@ export default {
   auth: {
     signInTitle: 'Вход в Downtify',
     signInBody: 'Влезте с потребителското си име и парола.',
+    signInBodyOidcOnly: 'Влезте чрез доставчика си на идентичност.',
     username: 'Потребителско име',
     password: 'Парола',
     signIn: 'Вход',
+    oidcSignIn: 'Продължете с доставчика на идентичност',
+    or: 'или',
+    oidcFailed:
+      'Влизането чрез доставчика на идентичност не бе успешно. Опитайте отново.',
     wrongPassword: 'Грешно потребителско име или парола',
     tooMany: 'Твърде много опити. Изчакайте няколко минути и опитайте отново.',
     forgotHint:
@@ -1764,6 +1834,12 @@ export default {
     androidUnreleased:
       'Още не е публикувана нито една версия: приложението е в процес на разработка, така че засега няма какво да се инсталира.',
     androidRepo: 'Вижте хранилището',
+    iosGroup: 'Downtify за iOS',
+    iosHint:
+      'Приложение за iPhone и iPad за разглеждане и слушане на библиотеката от този сървър.',
+    iosBody:
+      'Влезте с профила си или сдвоете приложението с код от тази страница. Разглеждайте и слушайте библиотеката си, запазвайте песни за офлайн слушане и управлявайте възпроизвеждането от заключения екран.',
+    iosRepo: 'Вижте хранилището',
   },
   replace: {
     menu: 'Замяна на аудиото…',

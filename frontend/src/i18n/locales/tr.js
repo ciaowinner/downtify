@@ -598,6 +598,8 @@ export default {
       artistDesc: 'Sanatçı (Z–A)',
       albumAsc: 'Albüm (A–Z)',
       albumDesc: 'Albüm (Z–A)',
+      releaseNewest: 'En yeni çıkanlar önce',
+      releaseOldest: 'En eski çıkanlar önce',
       longest: 'Önce en uzun',
       shortest: 'Önce en kısa',
     },
@@ -947,6 +949,23 @@ export default {
   },
   playlists: {
     kicker: 'Çalma listesi',
+    diagnostics: {
+      title: 'Çalma listesi tanılaması',
+      check: 'Denetle',
+      refresh: 'Yenile',
+      unavailable: 'Bu çalma listesi için tanılama kullanılamıyor.',
+      items: {
+        spotify_tracks: 'Spotify parçaları',
+        downloaded: 'Downtify tarafından indirildi',
+        physical_files: 'Bulunan dosyalar',
+        track_index: 'TrackIndex eşlemeleri',
+        monitor_history: 'Monitor geçmişi',
+        navidrome_matched: 'Navidrome’da eşleşenler',
+        navidrome_rows: 'Navidrome çalma listesi satırları',
+        missing_files: 'Eksik dosyalar',
+        orphan_files: 'Bağlantısız dosyalar',
+      },
+    },
     notFound: 'Çalma listesi bulunamadı',
     progress: '{total} parçadan {have} tanesi indirildi',
     missingShort: { one: '{count} eksik', other: '{count} eksik' },
@@ -983,6 +1002,26 @@ export default {
     },
     alreadyIn: 'Zaten “{name}” içinde',
     removedTrack: '“{name}” listesinden çıkarıldı',
+    reorder: 'Yeniden sırala',
+    reorderHint:
+      'Şarkıları sürükle ya da okları kullan, ardından yeni sırayı kaydet.',
+    reorderSave: 'Sırayı kaydet',
+    reordered: 'Sıra kaydedildi',
+    reorderStale:
+      'Bu liste bu arada başka biri tarafından değiştirildi. Yeniden yüklendi: tekrar sırala.',
+    moveUp: 'Yukarı taşı',
+    moveDown: 'Aşağı taşı',
+    moveTop: 'En üste taşı',
+    moveBottom: 'En alta taşı',
+    repeatTitle: 'Zaten bu listede',
+    repeatBody: {
+      one: 'Bu şarkı zaten “{name}” içinde. Yeniden eklensin mi?',
+      other:
+        'Bu şarkılardan {count} tanesi zaten “{name}” içinde. Yeniden eklensin mi?',
+    },
+    repeatConfirm: 'Yine de ekle',
+    repeatCancel: 'Ekleme',
+    inPlaylist: 'Zaten eklendi',
     hideTrack: 'Listeden gizle',
     hiddenTrack: '“{name}” listesinden gizlendi',
     hiddenTitle: {
@@ -1004,6 +1043,12 @@ export default {
     nothingYet: 'Henüz indirilen parça yok',
     nothingYetHint: 'Parçalar indirildikçe burada görünür.',
     nothingYetManualHint: 'Kitaplığından şarkı ekle.',
+    uploadCover: 'Kapak yükle',
+    removeCover: 'Kapağı kaldır',
+    coverSaved: 'Çalma listesi kapağı kaydedildi',
+    coverRemoved: 'Çalma listesi kapağı kaldırıldı',
+    coverInvalid: 'JPEG, PNG veya WebP görseli seç.',
+    coverTooLarge: 'Görsel en fazla 10 MiB olmalıdır.',
   },
   track: {
     title: 'Başlık',
@@ -1011,6 +1056,7 @@ export default {
     album: 'Albüm',
     trackNumber: 'Parça',
     year: 'Yıl',
+    releaseDate: 'Çıkış tarihi',
     length: 'Süre',
     format: 'Biçim',
     size: 'Boyut',
@@ -1436,6 +1482,20 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Biçim önceliği',
+    slskdFormatsHint:
+      'Virgülle ayrılmış uzantıları en yüksek öncelikliden başlayarak yazın (ör. flac, mp3).',
+    slskdMinBitrate: 'Kayıplı biçimler için minimum bit hızı',
+    slskdMinBitrateHint:
+      'Katı modda bu değerin altındaki veya bit hızı bildirilmemiş kayıplı dosyalar reddedilir. FLAC etkilenmez.',
+    slskdAttempts: 'Aday denemeleri',
+    slskdAttemptsHint:
+      'Katı modda her biçim için bu kadar aday denenir; diğer durumda toplam sayıdır.',
+    slskdStrictPriority: 'Katı biçim önceliği',
+    slskdStrictPriorityHint:
+      'Listelenen biçimleri sırayla dene ve her biçimdeki eşleşmeleri puanla.',
+    slskdWhitelist: 'Yalnızca listelenen biçimlere izin ver',
+    slskdWhitelistHint: 'Uzantısı listede olmayan sonuçları reddet.',
     slskdHint:
       'Soulseek’ten slskd sunucun üzerinden indir. Bulunamayan parçalar sonraki kaynağa geçer.',
     slskdEnabled: 'slskd kullan',
@@ -1448,7 +1508,7 @@ export default {
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
-      'İndirme klasörüne kopyalamak yerine slskd’nin kaydettiği yerde etiketle.',
+      'Açık: dosyaları yerinde etiketle ve koru. Kapalı: İndirilenler klasörüne kopyalayıp etiketle; kaynak yalnızca içe aktarma başarılı olursa silinir. Hata olursa kaynak korunur.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube çerezleri',
     cookiesHint:
@@ -1464,9 +1524,13 @@ export default {
     audioGroup: 'Ses',
     format: 'Biçim',
     formatHint: 'YouTube’dan indirilen dosyalar bu biçime dönüştürülür.',
+    formatOriginal: 'Orijinal',
+    formatOriginalHint:
+      'Yeniden kodlamadan kullanılabilen en iyi ses akışını korur. Dosya uzantısı kaynağa bağlıdır.',
     bitrate: 'Kalite',
     bitrateHint: 'Kayıplı biçimler için bit hızı.',
     bitrateLossless: 'Kayıpsız olan FLAC için kullanılmaz.',
+    bitrateOriginal: 'Orijinal ses biçimi korunurken kullanılmaz.',
     filesGroup: 'Dosyalar',
     template: 'Dosya adı',
     templateHint: 'Klasör oluşturmak için / kullan.',
@@ -1701,9 +1765,14 @@ export default {
   auth: {
     signInTitle: 'Downtify’a giriş yap',
     signInBody: 'Kullanıcı adınız ve parolanızla giriş yapın.',
+    signInBodyOidcOnly: 'Kimlik sağlayıcınızla giriş yapın.',
     username: 'Kullanıcı adı',
     password: 'Parola',
     signIn: 'Giriş yap',
+    oidcSignIn: 'Kimlik sağlayıcısıyla devam et',
+    or: 'veya',
+    oidcFailed:
+      'Kimlik sağlayıcısıyla giriş yapılamadı. Lütfen tekrar deneyin.',
     wrongPassword: 'Kullanıcı adı veya parola yanlış',
     tooMany: 'Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.',
     forgotHint:
@@ -1762,6 +1831,12 @@ export default {
     androidUnreleased:
       'Henüz hiçbir sürüm yayımlanmadı: uygulama hâlâ geliştirme aşamasında, dolayısıyla şimdilik kurulacak bir şey yok.',
     androidRepo: 'Depoyu görüntüle',
+    iosGroup: 'iOS için Downtify',
+    iosHint:
+      'Bu sunucudaki kitaplığınıza göz atmanızı ve müzik çalmanızı sağlayan iPhone ve iPad uygulaması.',
+    iosBody:
+      'Hesabınızla giriş yapın veya uygulamayı bu sayfadaki bir kodla eşleştirin. Kitaplığınıza göz atın, müzik çalın, çevrimdışı dinlemek için şarkıları kaydedin ve kilit ekranından oynatmayı kontrol edin.',
+    iosRepo: 'Depoyu görüntüle',
   },
   replace: {
     menu: 'Sesi değiştir…',

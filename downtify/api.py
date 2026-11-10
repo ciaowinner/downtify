@@ -174,7 +174,11 @@ downloads are shared, and files are never stored twice.
 * ``POST /api/library/lookup`` (search/link songs already in the library)
 * ``POST /api/library/playlists`` (create an empty editable playlist)
 * ``POST /api/library/playlists/tracks`` (add or remove tracks on a
-  manual playlist - its owner's, or one shared with you as an editor)
+  manual playlist - its owner's, or one shared with you as an editor;
+  ``allow_duplicates`` adds a song it already has again,
+  ``remove_entries`` takes out one copy of a repeated song)
+* ``PUT  /api/library/playlists/order`` (put a manual playlist's songs in
+  a new order: ``{name, files}``, every song in its new place)
 * ``POST /api/library/playlists/rename`` (rename a manual playlist)
 * ``PUT  /api/library/playlists/visibility`` (share a playlist you own:
   private, with named users - some of them editors of a Library
@@ -242,6 +246,7 @@ downloads are shared, and files are never stored twice.
   fields, ``?path=``)
 * ``POST /api/slskd/test`` and ``POST /api/navidrome/test`` (try the
   connection with the settings as they are in the form, saved or not)
+* ``POST /api/proxy/test`` (admin: test outbound proxy reachability)
 * ``GET  /api/cookies`` (current YouTube cookie configuration)
 * ``POST /api/cookies`` (upload a Netscape cookies.txt as the raw request
   body - no multipart, so no ``python-multipart`` dependency)
@@ -545,7 +550,10 @@ from .manual_playlists import (
     detach_imported_playlist,
     edit_manual_playlist,
     existing_playlist_names,
+    remove_manual_playlist_cover,
     rename_manual_playlist,
+    reorder_manual_playlist,
+    save_manual_playlist_cover,
 )
 from .monitor import (
     ALL_RELEASE_TYPES,
@@ -564,6 +572,7 @@ from .monitor import (
     playlist_watch_key,
 )
 from .navidrome import (
+    NavidromeClient,
     _effective_navidrome_settings,
     cache_navidrome_song_id,
     enrich_song_from_library_file,
@@ -577,6 +586,10 @@ from .playlist_batches import (
     split_tracks_by_library,
 )
 from .playlist_catalog import ManualPlaylistOwners, PlaylistCatalog
+from .playlist_diagnostics import (
+    PlaylistDiagnosticsContext,
+    build_playlist_diagnostics,
+)
 from .playlist_hidden import (
     HiddenSongs,
     HiddenSongsError,
@@ -588,7 +601,7 @@ from .playlist_hidden import (
     source_track_ids,
 )
 from .playlist_listing import list_library_playlists
-from .playlist_mosaic import keep_explicit_cover
+from .playlist_mosaic import MAX_PLAYLIST_COVER_BYTES, keep_explicit_cover
 from .playlist_shares import (
     PRIVATE,
     SHARED,
@@ -715,6 +728,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'duration_tolerance_percent': 15,
         'mix_duration_tolerance_percent': 50,
         'extensions': ['mp3', 'flac'],
+        'strict_format_priority': False,
+        'extensions_whitelist': False,
         'min_bitrate': 256,
     },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
@@ -905,13 +920,15 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
     source_dir = str(raw.get('source_dir') or '').strip() or (
         '/slskd' if leave_in_place else download_dir
     )
-    try:
-        min_bitrate = int(raw.get('min_bitrate') or 256)
-    except (TypeError, ValueError):
-        min_bitrate = 256
 
     def bounded(key: str, default: int, low: int, high: int) -> int:
         return _setting_int(raw, key, default, minimum=low, maximum=high)
+
+    try:
+        min_bitrate = int(raw.get('min_bitrate'))
+    except (TypeError, ValueError):
+        min_bitrate = 256
+    min_bitrate = min(10000, max(0, min_bitrate))
 
     return {
         'enabled': bool(raw.get('enabled', False)),
@@ -942,6 +959,10 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'mix_duration_tolerance_percent': bounded(
             'mix_duration_tolerance_percent', 50, 1, 200
         ),
+        'strict_format_priority': bool(
+            raw.get('strict_format_priority', False)
+        ),
+        'extensions_whitelist': bool(raw.get('extensions_whitelist', False)),
         'min_bitrate': min_bitrate,
         'max_parallel_downloads': _setting_int(
             settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
@@ -2846,7 +2867,7 @@ def search_endpoint(
         return library_only.search(entries_for_request(request), query)
     results = providers.search_songs(query, limit=20)
     if results:
-        return results
+        return [{**song, 'download_by_metadata': True} for song in results]
     q = query.strip()
     if not q or 'slskd' not in _effective_audio_providers(state.settings):
         return []
@@ -3979,14 +4000,23 @@ def _song_from_download_request(
     """The song to download for ``POST /api/download/url``.
 
     A slskd search stub (``source == 'text_search'``, see
-    :func:`search_endpoint`) or a Deezer chart/Finder row (``source ==
-    'deezer'``, see :func:`discover_chart_endpoint` and
+    :func:`search_endpoint`), a YouTube Music search row marked for
+    metadata matching, or a Deezer chart/Finder row (``source == 'deezer'``,
+    see :func:`discover_chart_endpoint` and
     :func:`finder_search_endpoint`) has no URL this app
-    can resolve on its own - both are taken from the request body as-is,
+    can resolve on its own - these rows are taken from the request body as-is,
     already-resolved metadata that :func:`downtify.providers.find_match`
     can search YouTube/YouTube Music for directly.
     """
 
+    if (
+        isinstance(client_hints, dict)
+        and client_hints.get('download_by_metadata') is True
+    ):
+        song = dict(client_hints)
+        song.pop('download_by_metadata', None)
+        song['_match_by_metadata'] = True
+        return song
     if (
         isinstance(client_hints, dict)
         and client_hints.get('source') in _CLIENT_RESOLVED_SOURCES
@@ -6975,6 +7005,72 @@ async def create_library_playlist_endpoint(request: Request) -> dict[str, Any]:
     return result
 
 
+@router.put('/api/library/playlists/cover')
+async def upload_library_playlist_cover_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
+    """Set a manual playlist's own cover (owner or admin only)."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=403,
+            detail='Only a Library playlist can change its cover',
+        )
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > MAX_PLAYLIST_COVER_BYTES:
+            raise HTTPException(
+                status_code=413, detail='Cover image is too large'
+            )
+    content_type = request.headers.get('content-type', '').split(';', 1)[0]
+    try:
+        await asyncio.to_thread(
+            save_manual_playlist_cover,
+            library_context(),
+            str(entry.get('name') or name),
+            bytes(data),
+            content_type.lower(),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await announce_playlists_changed()
+    return {'ok': True}
+
+
+@router.delete('/api/library/playlists/cover')
+async def remove_library_playlist_cover_endpoint(
+    request: Request, name: str = Query(...)
+) -> dict[str, Any]:
+    """Remove a manual playlist's own cover (owner or admin only)."""
+
+    entry = require_playlist_visible(name, request, manage=True)
+    if not entry.get('manual'):
+        raise HTTPException(
+            status_code=403,
+            detail='Only a Library playlist can change its cover',
+        )
+    try:
+        await asyncio.to_thread(
+            remove_manual_playlist_cover,
+            library_context(),
+            str(entry.get('name') or name),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    await announce_playlists_changed()
+    return {'ok': True}
+
+
 @router.get('/api/library/playlists/external')
 async def external_playlist_candidates(request: Request) -> dict[str, Any]:
     user_id = request_user_id(request)
@@ -7145,6 +7241,7 @@ async def edit_library_playlist_tracks_endpoint(
         if isinstance(payload.get('remove'), list)
         else []
     )
+    remove_entries = _playlist_entry_refs(payload.get('remove_entries'))
     ctx = library_context()
     # Only songs they can see: one an admin hid is as good as missing.
     added = [path for path in (str(item).strip() for item in add) if path]
@@ -7164,6 +7261,8 @@ async def edit_library_playlist_tracks_endpoint(
             name,
             add=[str(item) for item in add],
             remove=[str(item) for item in remove],
+            remove_entries=remove_entries,
+            allow_duplicates=payload.get('allow_duplicates') is True,
         )
     except ManualPlaylistError as exc:
         raise HTTPException(
@@ -7183,6 +7282,63 @@ async def edit_library_playlist_tracks_endpoint(
     invalidate_library_paths_cache()
     if entry.get('visibility', PRIVATE) != PRIVATE:
         # Others have it open: the owner and its other editors.
+        await announce_playlists_changed()
+    return result
+
+
+def _playlist_entry_refs(raw: object) -> list[tuple[str, int]]:
+    """``[{file, occurrence}]`` from a request as ``(file, occurrence)``:
+    one copy of a song a playlist may hold more than once."""
+
+    if not isinstance(raw, list):
+        return []
+    refs: list[tuple[str, int]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        file = str(item.get('file') or '').strip()
+        occurrence = item.get('occurrence', 0)
+        if file and isinstance(occurrence, int) and occurrence >= 0:
+            refs.append((file, occurrence))
+    return refs
+
+
+@router.put('/api/library/playlists/order')
+async def reorder_library_playlist_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Put a manual playlist's songs in a new order: ``{name, files}``,
+    every song the caller sees (repeats included) in its new place. For
+    its owner (or an admin) and its editors; ``409`` when the playlist
+    changed since the caller loaded it."""
+
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    entry = require_playlist_visible(name, request)
+    if not entry.get('mine', True) and not entry.get('can_edit_tracks'):
+        raise HTTPException(
+            status_code=403,
+            detail='Only the owner can change this playlist',
+        )
+    files = payload.get('files')
+    if not isinstance(files, list):
+        raise HTTPException(status_code=400, detail='Send the new order')
+    try:
+        result = await asyncio.to_thread(
+            reorder_manual_playlist,
+            library_context(),
+            name,
+            [str(item) for item in files],
+            # What the caller was shown: songs hidden from them keep
+            # their places.
+            visible=set(entry.get('files') or []),
+        )
+    except ManualPlaylistError as exc:
+        raise HTTPException(
+            status_code=exc.status_code, detail=str(exc)
+        ) from exc
+    invalidate_library_paths_cache()
+    if entry.get('visibility', PRIVATE) != PRIVATE:
         await announce_playlists_changed()
     return result
 
@@ -7716,6 +7872,45 @@ async def playlist_details_endpoint(
     )
     return await asyncio.to_thread(
         _playlist_details, str(entry['name']), files
+    )
+
+
+@router.get('/api/library/playlists/diagnostics')
+async def playlist_diagnostics_endpoint(
+    request: Request, name: str = Query(..., min_length=1)
+) -> dict[str, Any]:
+    """Compare a Spotify playlist with its local and Navidrome records."""
+
+    entry = require_playlist_visible(name, request)
+    files = await asyncio.to_thread(
+        filter_paths_for_request, list(entry.get('files') or []), request
+    )
+    return await asyncio.to_thread(
+        _playlist_diagnostics, str(entry['name']), files, request
+    )
+
+
+def _playlist_diagnostics(
+    name: str, files: list[str], request: Request
+) -> dict[str, Any]:
+    ctx = library_context()
+    return build_playlist_diagnostics(
+        name,
+        files,
+        PlaylistDiagnosticsContext(
+            catalog=state.playlist_catalog,
+            spotify_cache=state.playlist_spotify_cache,
+            track_index=state.track_index,
+            navidrome_index=state.navidrome_index,
+            monitor_db=state.monitor_db,
+            hidden=state.playlist_hidden,
+            settings=state.settings,
+            download_dir=ctx.download_dir,
+            slskd_dir=ctx.slskd_dir,
+            is_admin=request_is_admin(request),
+            user_id=request_user_id(request),
+            navidrome_client=NavidromeClient,
+        ),
     )
 
 
@@ -8782,6 +8977,13 @@ async def test_navidrome_endpoint(request: Request) -> dict[str, Any]:
         'navidrome': payload or (saved if isinstance(saved, dict) else {}),
     })
     return await asyncio.to_thread(integration_check.check_navidrome, cfg)
+
+
+@router.post('/api/proxy/test')
+async def test_proxy_endpoint() -> dict[str, Any]:
+    """Check the configured outbound proxy without exposing its egress IP."""
+
+    return await asyncio.to_thread(integration_check.check_outbound_proxy)
 
 
 # ---------------------------------------------------------------------------

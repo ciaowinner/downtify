@@ -589,6 +589,8 @@ export default {
       artistDesc: 'Artist (Z–A)',
       albumAsc: 'Album (A–Z)',
       albumDesc: 'Album (Z–A)',
+      releaseNewest: 'Newest release first',
+      releaseOldest: 'Oldest release first',
       longest: 'Longest first',
       shortest: 'Shortest first',
     },
@@ -934,6 +936,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Playlist diagnostics',
+      check: 'Check',
+      refresh: 'Refresh',
+      unavailable: 'Diagnostics are unavailable for this playlist.',
+      items: {
+        spotify_tracks: 'Spotify tracks',
+        downloaded: 'Downtify downloaded',
+        physical_files: 'Physical files found',
+        track_index: 'TrackIndex mappings',
+        monitor_history: 'Monitor history',
+        navidrome_matched: 'Navidrome matched',
+        navidrome_rows: 'Navidrome playlist rows',
+        missing_files: 'Missing files',
+        orphan_files: 'Orphan files',
+      },
+    },
     notFound: 'Playlist not found',
     progress: '{have} of {total} downloaded',
     missingShort: { one: '{count} missing', other: '{count} missing' },
@@ -970,6 +989,24 @@ export default {
     },
     alreadyIn: 'Already in “{name}”',
     removedTrack: 'Removed from “{name}”',
+    reorder: 'Reorder',
+    reorderHint: 'Drag the songs or use the arrows, then save the new order.',
+    reorderSave: 'Save order',
+    reordered: 'Order saved',
+    reorderStale:
+      'Someone changed this playlist meanwhile. It was reloaded: arrange it again.',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+    moveTop: 'Move to top',
+    moveBottom: 'Move to bottom',
+    repeatTitle: 'Already in this playlist',
+    repeatBody: {
+      one: 'This song is already in “{name}”. Add it again?',
+      other: '{count} of these songs are already in “{name}”. Add them again?',
+    },
+    repeatConfirm: 'Add anyway',
+    repeatCancel: 'Don’t add',
+    inPlaylist: 'Already added',
     hideTrack: 'Hide from playlist',
     hiddenTrack: 'Hidden from “{name}”',
     hiddenTitle: {
@@ -991,6 +1028,12 @@ export default {
     nothingYet: 'No tracks yet',
     nothingYetHint: 'Tracks appear here as they finish downloading.',
     nothingYetManualHint: 'Add songs from your library.',
+    uploadCover: 'Upload cover',
+    removeCover: 'Remove cover',
+    coverSaved: 'Playlist cover saved',
+    coverRemoved: 'Playlist cover removed',
+    coverInvalid: 'Choose a JPEG, PNG or WebP image.',
+    coverTooLarge: 'Cover images must be 10 MiB or smaller.',
   },
   track: {
     title: 'Title',
@@ -998,6 +1041,7 @@ export default {
     album: 'Album',
     trackNumber: 'Track',
     year: 'Year',
+    releaseDate: 'Release date',
     length: 'Length',
     format: 'Format',
     size: 'Size',
@@ -1415,6 +1459,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Format priority',
+    slskdFormatsHint:
+      'Comma-separated extensions, highest priority first (for example, flac, mp3).',
+    slskdMinBitrate: 'Minimum lossy bitrate',
+    slskdMinBitrateHint:
+      'In strict mode, lossy files below this value or without a reported bitrate are rejected. FLAC is exempt.',
+    slskdAttempts: 'Candidate attempts',
+    slskdAttemptsHint:
+      'In strict mode, this many candidates are tried per format; otherwise this is the total.',
+    slskdStrictPriority: 'Strict format priority',
+    slskdStrictPriorityHint:
+      'Try each listed format in order, ranking matches within each format.',
+    slskdWhitelist: 'Only allow listed formats',
+    slskdWhitelistHint:
+      'Reject results whose extension is not in the format list.',
     slskdHint:
       'Download from Soulseek through your slskd server. Tracks it can’t find fall through to the next source.',
     slskdEnabled: 'Use slskd',
@@ -1427,7 +1486,7 @@ export default {
     slskdQueuedTimeout: 'Queued timeout',
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
-      'Tag them where slskd saved them instead of copying into your downloads folder.',
+      'On: tag files in place and keep them. Off: copy and tag in Downloads, then remove the source after a successful import. Copy, tagging or verification failures keep the source.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube cookies',
     cookiesHint:
@@ -1444,9 +1503,13 @@ export default {
     audioGroup: 'Audio',
     format: 'Format',
     formatHint: 'Files downloaded from YouTube are converted to this format.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Keep the best audio stream available without re-encoding it. The file extension depends on the source.',
     bitrate: 'Quality',
     bitrateHint: 'Bitrate for lossy formats.',
     bitrateLossless: 'Not used for FLAC, which is lossless.',
+    bitrateOriginal: 'Not used when keeping the original audio format.',
     filesGroup: 'Files',
     template: 'File name',
     templateHint: 'Use / to create folders.',
@@ -1677,9 +1740,14 @@ export default {
   auth: {
     signInTitle: 'Sign in to Downtify',
     signInBody: 'Sign in with your username and password.',
+    signInBodyOidcOnly: 'Sign in with your identity provider.',
     username: 'Username',
     password: 'Password',
     signIn: 'Sign in',
+    oidcSignIn: 'Continue with identity provider',
+    or: 'or',
+    oidcFailed:
+      'Could not sign in with the identity provider. Please try again.',
     wrongPassword: 'Wrong username or password',
     tooMany: 'Too many attempts. Wait a few minutes and try again.',
     forgotHint:
@@ -1736,6 +1804,12 @@ export default {
     androidUnreleased:
       'No version has been published yet: the app is still in development, so there is nothing to install for now.',
     androidRepo: 'See the repository',
+    iosGroup: 'Downtify for iOS',
+    iosHint:
+      'An iPhone and iPad app that browses and plays your library straight from this server.',
+    iosBody:
+      'Sign in with your account or pair the app with a code from this page. Then browse and play your library, keep songs on the device for offline listening, and control playback from the lock screen.',
+    iosRepo: 'See the repository',
   },
   replace: {
     menu: 'Replace audio…',

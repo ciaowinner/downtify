@@ -623,6 +623,8 @@ export default {
       artistDesc: 'Interpret (Z–A)',
       albumAsc: 'Album (A–Z)',
       albumDesc: 'Album (Z–A)',
+      releaseNewest: 'Neueste Veröffentlichungen zuerst',
+      releaseOldest: 'Älteste Veröffentlichungen zuerst',
       longest: 'Längste zuerst',
       shortest: 'Kürzeste zuerst',
     },
@@ -972,6 +974,23 @@ export default {
   },
   playlists: {
     kicker: 'Playlist',
+    diagnostics: {
+      title: 'Playlist-Diagnose',
+      check: 'Prüfen',
+      refresh: 'Aktualisieren',
+      unavailable: 'Für diese Playlist ist keine Diagnose verfügbar.',
+      items: {
+        spotify_tracks: 'Spotify-Titel',
+        downloaded: 'Von Downtify heruntergeladen',
+        physical_files: 'Gefundene Dateien',
+        track_index: 'TrackIndex-Zuordnungen',
+        monitor_history: 'Monitor-Verlauf',
+        navidrome_matched: 'In Navidrome gefunden',
+        navidrome_rows: 'Titel in der Navidrome-Playlist',
+        missing_files: 'Fehlende Dateien',
+        orphan_files: 'Verwaiste Dateien',
+      },
+    },
     notFound: 'Playlist nicht gefunden',
     progress: '{have} von {total} heruntergeladen',
     missingShort: { one: '{count} fehlt', other: '{count} fehlen' },
@@ -1012,6 +1031,26 @@ export default {
     },
     alreadyIn: 'Bereits in „{name}“',
     removedTrack: 'Aus „{name}“ entfernt',
+    reorder: 'Neu anordnen',
+    reorderHint:
+      'Ziehe die Titel oder nutze die Pfeile und speichere dann die neue Reihenfolge.',
+    reorderSave: 'Reihenfolge speichern',
+    reordered: 'Reihenfolge gespeichert',
+    reorderStale:
+      'Jemand hat diese Playlist inzwischen geändert. Sie wurde neu geladen: Ordne sie erneut an.',
+    moveUp: 'Nach oben',
+    moveDown: 'Nach unten',
+    moveTop: 'An den Anfang',
+    moveBottom: 'Ans Ende',
+    repeatTitle: 'Bereits in dieser Playlist',
+    repeatBody: {
+      one: 'Dieser Titel ist bereits in „{name}“. Erneut hinzufügen?',
+      other:
+        '{count} dieser Titel sind bereits in „{name}“. Erneut hinzufügen?',
+    },
+    repeatConfirm: 'Trotzdem hinzufügen',
+    repeatCancel: 'Nicht hinzufügen',
+    inPlaylist: 'Bereits hinzugefügt',
     hideTrack: 'In Playlist ausblenden',
     hiddenTrack: 'In „{name}“ ausgeblendet',
     hiddenTitle: {
@@ -1035,6 +1074,12 @@ export default {
     nothingYetHint:
       'Hier erscheinen Titel, sobald der Download abgeschlossen ist.',
     nothingYetManualHint: 'Füge Titel aus deiner Bibliothek hinzu.',
+    uploadCover: 'Cover hochladen',
+    removeCover: 'Cover entfernen',
+    coverSaved: 'Playlist-Cover gespeichert',
+    coverRemoved: 'Playlist-Cover entfernt',
+    coverInvalid: 'Wähle ein JPEG-, PNG- oder WebP-Bild aus.',
+    coverTooLarge: 'Das Bild darf höchstens 10 MiB groß sein.',
   },
   track: {
     title: 'Titel',
@@ -1042,6 +1087,7 @@ export default {
     album: 'Album',
     trackNumber: 'Titelnummer',
     year: 'Jahr',
+    releaseDate: 'Veröffentlichungsdatum',
     length: 'Länge',
     format: 'Format',
     size: 'Größe',
@@ -1478,6 +1524,21 @@ export default {
     deemixLocal: 'Same folder inside Downtify (read-only is supported)',
     deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
+    slskdFormats: 'Formatpriorität',
+    slskdFormatsHint:
+      'Kommagetrennte Dateiendungen, zuerst die höchste Priorität (z. B. flac, mp3).',
+    slskdMinBitrate: 'Minimale Bitrate für verlustbehaftete Formate',
+    slskdMinBitrateHint:
+      'Im strikten Modus werden verlustbehaftete Dateien unter diesem Wert oder ohne gemeldete Bitrate abgelehnt. FLAC ist ausgenommen.',
+    slskdAttempts: 'Kandidatenversuche',
+    slskdAttemptsHint:
+      'Im strikten Modus wird diese Anzahl je Format versucht, sonst insgesamt.',
+    slskdStrictPriority: 'Strikte Formatpriorität',
+    slskdStrictPriorityHint:
+      'Formate der Reihe nach versuchen und Treffer innerhalb jedes Formats bewerten.',
+    slskdWhitelist: 'Nur aufgeführte Formate zulassen',
+    slskdWhitelistHint:
+      'Ergebnisse mit einer nicht aufgeführten Dateiendung ablehnen.',
     slskdHint:
       'Lade Musik über deinen slskd-Server von Soulseek herunter. Nicht gefundene Titel werden bei der nächsten Quelle gesucht.',
     slskdEnabled: 'slskd verwenden',
@@ -1492,7 +1553,7 @@ export default {
     slskdQueuedTimeout: 'Zeitlimit in Warteschlange',
     slskdInPlace: 'Dateien im slskd-Ordner belassen',
     slskdInPlaceHint:
-      'Füge Tags dort hinzu, wo slskd die Dateien gespeichert hat, statt sie in den Downloadordner zu kopieren.',
+      'Ein: Dateien am Speicherort taggen und behalten. Aus: in Downloads kopieren und taggen; die Quelle wird erst nach erfolgreichem Import entfernt. Bei Fehlern bleibt sie erhalten.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube-Cookies',
     cookiesHint:
@@ -1511,9 +1572,14 @@ export default {
     format: 'Format',
     formatHint:
       'Von YouTube heruntergeladene Dateien werden in dieses Format konvertiert.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Den besten verfügbaren Audiostream ohne erneute Kodierung beibehalten. Die Dateiendung hängt von der Quelle ab.',
     bitrate: 'Qualität',
     bitrateHint: 'Bitrate für verlustbehaftete Formate.',
     bitrateLossless: 'Wird für verlustfreies FLAC nicht verwendet.',
+    bitrateOriginal:
+      'Wird beim Beibehalten des Originalformats nicht verwendet.',
     filesGroup: 'Dateien',
     template: 'Dateiname',
     templateHint: 'Verwende /, um Ordner zu erstellen.',
@@ -1759,9 +1825,14 @@ export default {
   auth: {
     signInTitle: 'Bei Downtify anmelden',
     signInBody: 'Melde dich mit deinem Benutzernamen und Passwort an.',
+    signInBodyOidcOnly: 'Melde dich über deinen Identitätsanbieter an.',
     username: 'Benutzername',
     password: 'Passwort',
     signIn: 'Anmelden',
+    oidcSignIn: 'Mit Identitätsanbieter fortfahren',
+    or: 'oder',
+    oidcFailed:
+      'Die Anmeldung über den Identitätsanbieter ist fehlgeschlagen. Bitte versuche es erneut.',
     wrongPassword: 'Benutzername oder Passwort falsch',
     tooMany: 'Zu viele Versuche. Warte einige Minuten und versuche es erneut.',
     forgotHint:
@@ -1824,6 +1895,12 @@ export default {
     androidUnreleased:
       'Es wurde noch keine Version veröffentlicht: Die App befindet sich noch in Entwicklung und kann derzeit nicht installiert werden.',
     androidRepo: 'Repository ansehen',
+    iosGroup: 'Downtify für iOS',
+    iosHint:
+      'Eine iPhone- und iPad-App zum Durchsuchen und Abspielen deiner Bibliothek auf diesem Server.',
+    iosBody:
+      'Melde dich mit deinem Konto an oder kopple die App mit einem Code von dieser Seite. Durchsuche und spiele deine Bibliothek, speichere Titel für die Offline-Wiedergabe und steuere die Wiedergabe auf dem Sperrbildschirm.',
+    iosRepo: 'Repository ansehen',
   },
   replace: {
     menu: 'Audio ersetzen …',
